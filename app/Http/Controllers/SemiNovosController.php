@@ -6,27 +6,42 @@ use Laravel\Lumen\Routing\Controller as BaseController;
 
 use Illuminate\Http\Request;
 
+use Symfony\Component\DomCrawler\Crawler;
+
 class SemiNovosController extends BaseController
 {
     public function search(Request $request) {
      
-        $url = $this->createUrl($request);
+        $baseUrl = 'https://seminovos.com.br/';
+
+        $url = $this->createUrl($baseUrl, $request);
 
         $html = file_get_contents($url);
 
         $adsHtml = explode('<div class="anuncio-container">', $html);
 
         unset($adsHtml[0]);
-        
+
+        $arrReturn = [];
+
         foreach ($adsHtml as $e) {
-            dd($e);
+            $initialElement = explode('<div class="anuncio-thumb-new anuncio-card-new ">', $e);
+            
+            // $adLink = explode('<div class="anuncio-thumb-new anuncio-card-new ">', $initialElement[0]);
+            // $adLink = explode("<figure>",$adLink[$i]);
+            // $adLink = explode("\n", $adLink[0]);
+            // $adLink = explode("<a href=", $adLink[1]);
+            // $adLink = explode('"', $adLink[1]);
+            // $adLink = explode('/', $adLink[1]);
+            // $adLink = $adLink[1];
+            
+            var_dump($e);
         }
         
     }
 
-    public function createUrl($request){
+    public function createUrl($baseUrl, $request){
 
-        $baseUrl = 'https://seminovos.com.br/';
         $arrParam = [];
         //String values
         $arrParam["vehicleType"] = $request->vehicleType;

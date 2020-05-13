@@ -6,42 +6,75 @@ use Laravel\Lumen\Routing\Controller as BaseController;
 
 use Illuminate\Http\Request;
 
+use \GuzzleHttp\Client;
+use Symfony\Component\CssSelector\CssSelectorConverter;
 use Symfony\Component\DomCrawler\Crawler;
 
 class SemiNovosController extends BaseController
 {
     public function search(Request $request) {
-     
-        $baseUrl = 'https://seminovos.com.br/';
+        $url = $this->createUrl($request);
 
-        $url = $this->createUrl($baseUrl, $request);
+        $client = new \GuzzleHttp\Client();
+        
+        $html = $client->get($url);
+        $html = $html->getBody()->getContents();
 
-        $html = file_get_contents($url);
+        $crawler = new Crawler($html);
 
-        $adsHtml = explode('<div class="anuncio-container">', $html);
+        $data = $crawler->filter('div.anuncio-container > div.anuncio-thumb-new')->each(function ($content) {            
+            $adLink = "https://seminovos.com.br".$content->filter('a[class="thumbnail"]')->attr('href');
+            $adTitle = $content->filter('div.content > div.card-body > div.card-header > h4')->text();
+            $adInfo = $content->filter('div.content > div.card-body > div.card-header > div.card-description > span')->text();
+            return [
+                "adLink" => $adLink,
+                "adTitle" => $adTitle,
+                "adInfo" => $adInfo
+            ];
+        });
+        
+        return json_encode($data);
+           
+    }
 
-        unset($adsHtml[0]);
+    public function searchAd(Request $request){
+        $url = $request->url;
+        
+        $client = new \GuzzleHttp\Client();
+        
+        $html = $client->get($url);
+        $html = $html->getBody()->getContents();
 
-        $arrReturn = [];
+        $crawler = new Crawler($html);
+        
+        $adTitle = $crawler->filter('h1[itemprop="name"]')->text();
+        $adInfo = $crawler->filter('p[class="desc"]')->text();
+        $yearModelAd = $crawler->filter('span[itemprop="modelDate"]')->text();        
+        $mileageAd = $crawler->filter('span[itemprop="mileageFromOdometer"]')->text();        
+        $transmissionAd = $crawler->filter('span[title="Tipo de transmissão"]')->text();        
+        $amountPortsAd = $crawler->filter('span[title="Portas"]')->text();        
+        $fuelTypeAd = $crawler->filter('span[itemprop="fuelType"]')->text();        
+        $colorAd = $crawler->filter('span[title="Cor do veículo"]')->text();
+        
+        $data = [
+            "adTitle" => $adTitle,
+            "adLink" => $url,
+            "adInfo" => $adInfo,
+            "yearModelAd" => $yearModelAd,
+            "mileageAd" => $mileageAd,
+            "transmissionAd" => $transmissionAd,
+            "amountPortsAd" => $amountPortsAd,
+            "fuelTypeAd" => $fuelTypeAd,
+            "colorAd" => $colorAd
+        ];
 
-        foreach ($adsHtml as $e) {
-            $initialElement = explode('<div class="anuncio-thumb-new anuncio-card-new ">', $e);
-            
-            // $adLink = explode('<div class="anuncio-thumb-new anuncio-card-new ">', $initialElement[0]);
-            // $adLink = explode("<figure>",$adLink[$i]);
-            // $adLink = explode("\n", $adLink[0]);
-            // $adLink = explode("<a href=", $adLink[1]);
-            // $adLink = explode('"', $adLink[1]);
-            // $adLink = explode('/', $adLink[1]);
-            // $adLink = $adLink[1];
-            
-            var_dump($e);
-        }
+        return json_encode($data);
         
     }
 
-    public function createUrl($baseUrl, $request){
+    public function createUrl($request){
 
+        $baseUrl = 'https://seminovos.com.br/';
         $arrParam = [];
         //String values
         $arrParam["vehicleType"] = $request->vehicleType;
@@ -53,25 +86,14 @@ class SemiNovosController extends BaseController
         $arrParam["finalYear"] = $request->finalYear;
         $arrParam["initialPrice"] = $request->initialPrice;
         $arrParam["finalPrice"] = $request->finalPrice;
-                
-        //GeneralParameters
-        // Order By
-        // 2 = Maior Relevância
-        // 3 = Maior Preço
-        // 4 = Menor Preço
-        // 5 = Mais Novo
-        // 6 = Mais Antigo
-        $arrParam["orderBy"] = $request->orderBy;
-        $arrParam["records"] = $request->records;
-        
         
         // https://seminovos.com.br/carro/audi/100/ano-2020-2021/preco-4000-100000/particular-origem/revenda-origem/novo-estado/seminovo-estado
                 
         $url = $baseUrl.$arrParam["vehicleType"]."/".$arrParam["vehicleBrand"]."/".$arrParam["vehicleModel"]."/"
-               ."ano-".$arrParam["initialYear"]."-".$arrParam["finalYear"]."preco-".$arrParam["initialPrice"]
-               ."-".$arrParam["finalPrice"]."?ordenarPor=".$arrParam["orderBy"]."&ampregistrosPagina=".$arrParam["records"];
+               ."ano-".$arrParam["initialYear"]."-".$arrParam["finalYear"]."/preco-".$arrParam["initialPrice"]
+               ."-".$arrParam["finalPrice"];
         
         return $url;
-        
+                
     }
 }

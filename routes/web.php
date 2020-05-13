@@ -18,3 +18,5 @@ $router->get('/', function () use ($router) {
 });
 
 $router->post("/search", "SeminovosController@search");
+
+$router->post("/searchad", "SeminovosController@searchAd");
